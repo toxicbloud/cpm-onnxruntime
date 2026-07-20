@@ -5,12 +5,11 @@ on:
     - cron: '0 0 * * *' # Vérification quotidienne à minuit
   workflow_dispatch: # Permet de lancer la synchro manuellement
 
-# Autoriser l'action à pusher sur ton repo
 permissions:
   contents: write
 
 jobs:
-  sync-release:
+  sync-releases:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -18,47 +17,52 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get latest ONNX Runtime version
-        id: upstream
+      - name: Setup Git
         run: |
-          LATEST_TAG=$(curl -s https://api.github.com/repos/microsoft/onnxruntime/releases/latest | jq -r .tag_name)
-          VERSION=${LATEST_TAG#v} # Retire le 'v'
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "tag=${LATEST_TAG}" >> $GITHUB_OUTPUT
-
-      - name: Check if tag already exists in wrapper
-        id: check
-        run: |
-          if git ls-remote --tags origin refs/tags/${{ steps.upstream.outputs.tag }} | grep -q "${{ steps.upstream.outputs.tag }}"; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Update CMakeLists.txt and push tag
-        if: steps.check.outputs.exists == 'false'
-        run: |
-          # Remplace la version dans le CMakeLists.txt
-          sed -i -E 's/set\(ORT_VERSION ".*"\)/set\(ORT_VERSION "${{ steps.upstream.outputs.version }}"\)/' CMakeLists.txt
-          
-          # Configuration git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Commit sur main
-          git add CMakeLists.txt
-          git commit -m "Auto-update to ONNX Runtime ${{ steps.upstream.outputs.version }}"
-          git push origin main
-          
-          # Création et push du tag
-          git tag ${{ steps.upstream.outputs.tag }}
-          git push origin ${{ steps.upstream.outputs.tag }}
 
-      - name: Create GitHub Release
-        if: steps.check.outputs.exists == 'false'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.upstream.outputs.tag }}
-          name: Release ${{ steps.upstream.outputs.tag }}
-          body: "Automated mirror release for ONNX Runtime ${{ steps.upstream.outputs.tag }}"
-          make_latest: true
+      - name: Sync All Missing Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 1. Récupérer les dernières releases (sans les pre-releases/RC) via l'API GitHub
+          # jq filtre pour ne garder que les tags des versions stables (ex: v1.18.0)
+          RELEASES=$(curl -s "https://api.github.com/repos/microsoft/onnxruntime/releases?per_page=30" | jq -r 'map(select(.prerelease == false)) | .[].tag_name' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$')
+
+          # 2. Inverser la liste pour traiter de la plus vieille à la plus récente
+          RELEASES=$(echo "$RELEASES" | tac)
+
+          # 3. Boucler sur chaque version
+          for TAG in $RELEASES; do
+            VERSION=${TAG#v}
+
+            # Vérifier si le tag existe déjà sur origin
+            if git ls-remote --tags origin refs/tags/$TAG | grep -q "$TAG"; then
+              echo "✅ Le tag $TAG existe déjà, on passe."
+            else
+              echo "🚀 Création du tag $TAG (version $VERSION)..."
+
+              # Revenir sur main et pull au cas où
+              git checkout main
+              git pull origin main
+
+              # Mettre à jour la version dans le CMakeLists.txt
+              sed -i -E "s/set\(ORT_VERSION \".*\"\)/set\(ORT_VERSION \"$VERSION\"\)/" CMakeLists.txt
+
+              # Commit sur main
+              git add CMakeLists.txt
+              git commit -m "Auto-update to ONNX Runtime $VERSION"
+              git push origin main
+
+              # Création et push du tag
+              git tag $TAG
+              git push origin $TAG
+
+              # Création de la release GitHub via l'outil officiel (gh cli)
+              gh release create $TAG --title "Release $TAG" --notes "Automated mirror release for ONNX Runtime $TAG"
+              
+              # Petite pause pour éviter de spammer l'API GitHub
+              sleep 2
+            fi
+          done
