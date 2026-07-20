@@ -1,0 +1,64 @@
+name: Sync ONNX Runtime Releases
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Vérification quotidienne à minuit
+  workflow_dispatch: # Permet de lancer la synchro manuellement
+
+# Autoriser l'action à pusher sur ton repo
+permissions:
+  contents: write
+
+jobs:
+  sync-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest ONNX Runtime version
+        id: upstream
+        run: |
+          LATEST_TAG=$(curl -s https://api.github.com/repos/microsoft/onnxruntime/releases/latest | jq -r .tag_name)
+          VERSION=${LATEST_TAG#v} # Retire le 'v'
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=${LATEST_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Check if tag already exists in wrapper
+        id: check
+        run: |
+          if git ls-remote --tags origin refs/tags/${{ steps.upstream.outputs.tag }} | grep -q "${{ steps.upstream.outputs.tag }}"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update CMakeLists.txt and push tag
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          # Remplace la version dans le CMakeLists.txt
+          sed -i -E 's/set\(ORT_VERSION ".*"\)/set\(ORT_VERSION "${{ steps.upstream.outputs.version }}"\)/' CMakeLists.txt
+          
+          # Configuration git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Commit sur main
+          git add CMakeLists.txt
+          git commit -m "Auto-update to ONNX Runtime ${{ steps.upstream.outputs.version }}"
+          git push origin main
+          
+          # Création et push du tag
+          git tag ${{ steps.upstream.outputs.tag }}
+          git push origin ${{ steps.upstream.outputs.tag }}
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.upstream.outputs.tag }}
+          name: Release ${{ steps.upstream.outputs.tag }}
+          body: "Automated mirror release for ONNX Runtime ${{ steps.upstream.outputs.tag }}"
+          make_latest: true
