@@ -26,9 +26,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # 1. Récupérer les dernières releases (sans les pre-releases/RC) via l'API GitHub
-          # jq filtre pour ne garder que les tags des versions stables (ex: v1.18.0)
-          RELEASES=$(curl -s "https://api.github.com/repos/microsoft/onnxruntime/releases?per_page=30" | jq -r 'map(select(.prerelease == false)) | .[].tag_name' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$')
+          # 1. Utiliser gh cli pour lister jusqu'à 200 releases (sans les betas/drafts) de manière robuste en JSON
+          RELEASES=$(gh release list -R microsoft/onnxruntime --exclude-pre-releases --exclude-drafts --limit 200 --json tagName -q ".[].tagName" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$')
 
           # 2. Inverser la liste pour traiter de la plus vieille à la plus récente
           RELEASES=$(echo "$RELEASES" | tac)
@@ -62,7 +61,7 @@ jobs:
               # Création de la release GitHub via l'outil officiel (gh cli)
               gh release create $TAG --title "Release $TAG" --notes "Automated mirror release for ONNX Runtime $TAG"
               
-              # Petite pause pour éviter de spammer l'API GitHub
+              # Petite pause pour éviter de spammer l'API GitHub et de se faire bloquer
               sleep 2
             fi
           done
