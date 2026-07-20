@@ -46,7 +46,7 @@ FetchContent_MakeAvailable(onnxruntime_binaries)
 
 # 5. Création de la cible universelle
 if(NOT TARGET onnxruntime)
-    add_library(onnxruntime SHARED IMPORTED)
+    add_library(onnxruntime SHARED IMPORTED GLOBAL)
     
     set_target_properties(onnxruntime PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES "${onnxruntime_binaries_SOURCE_DIR}/include"
