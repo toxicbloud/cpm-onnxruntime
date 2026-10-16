@@ -5,22 +5,22 @@ int main() {
     std::cout << "=== Test CPM ONNX Runtime ===" << std::endl;
 
     try {
-        // 1. Initialiser l'environnement (Requis par ONNX Runtime)
+        // 1. Initialize the environment (required by ONNX Runtime).
         Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "CPM_Test_Env");
         
-        // 2. Afficher la version pour prouver que le linkage dynamique a fonctionné
-        std::cout << "✅ ONNX Runtime charge avec succes !" << std::endl;
-        std::cout << "🏷️  Version de l'API : " << OrtGetApiBase()->GetVersionString() << std::endl;
+        // 2. Print the version to confirm that dynamic linking worked.
+        std::cout << "ONNX Runtime initialized successfully." << std::endl;
+        std::cout << "API version: " << OrtGetApiBase()->GetVersionString() << std::endl;
 
-        // 3. Préparer les options de session (Exemple basique)
+        // 3. Set up basic session options.
         Ort::SessionOptions session_options;
         session_options.SetIntraOpNumThreads(1);
         session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
 
-        std::cout << "🚀 Pret a charger un modele et faire une inference !" << std::endl;
+        std::cout << "Ready to load a model and run inference." << std::endl;
 
     } catch (const Ort::Exception& e) {
-        std::cerr << "❌ Erreur ONNX Runtime : " << e.what() << std::endl;
+        std::cerr << "ONNX Runtime error: " << e.what() << std::endl;
         return 1;
     }
 

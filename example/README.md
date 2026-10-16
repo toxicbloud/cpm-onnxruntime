@@ -1,21 +1,22 @@
-# Exemple d'utilisation de CPM ONNX Runtime
+# Minimal C++ example
 
-Cet exemple montre comment configurer un projet CMake minimal pour utiliser ONNX Runtime via notre wrapper CPM.
+This example shows how to use ONNX Runtime in a small CMake project with this wrapper and CPM.cmake.
 
-## Prérequis
-* CMake 3.14+
-* Un compilateur C++17
+## Requirements
 
-## Compiler et exécuter
+- CMake 3.14 or later
+- A C++17 compiler
 
-Ouvrez un terminal dans ce dossier (`example/`) et lancez :
+## Build and run
+
+From this directory, run:
 
 ```bash
-# 1. Générer les fichiers de build (CPM téléchargera ONNX Runtime automatiquement ici)
+# Configure the project; CPM downloads ONNX Runtime as part of configuration.
 cmake -S . -B build
 
-# 2. Compiler le projet
+# Build the example.
 cmake --build build
 
-# 3. Exécuter l'application
+# Run the example.
 ./build/mon_app

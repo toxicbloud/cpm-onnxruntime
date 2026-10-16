@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.14)
 
-# L'Action GitHub mettra à jour cette ligne automatiquement
+# This line is updated automatically by the GitHub Action.
 set(ORT_VERSION "1.31.0")
 
 project(cpm-onnxruntime VERSION ${ORT_VERSION} LANGUAGES CXX)
 
-# 1. Détection de l'OS
+# 1. Detect the operating system.
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(ORT_OS "linux")
     set(ORT_EXT "tgz")
@@ -16,27 +16,27 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(ORT_OS "osx")
     set(ORT_EXT "tgz")
 else()
-    message(FATAL_ERROR "OS non supporté par ce wrapper ONNX Runtime")
+    message(FATAL_ERROR "Operating system is not supported by this ONNX Runtime wrapper")
 endif()
 
-# 2. Détection de l'Architecture
+# 2. Detect the architecture.
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64|amd64")
     set(ORT_ARCH "x64")
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64|ARM64")
     set(ORT_ARCH "aarch64")
 else()
-    message(FATAL_ERROR "Architecture ${CMAKE_SYSTEM_PROCESSOR} non supportée")
+    message(FATAL_ERROR "Architecture ${CMAKE_SYSTEM_PROCESSOR} is not supported")
 endif()
 
-# Patch spécifique pour macOS ARM64 (Apple Silicon)
+# macOS ARM64 (Apple Silicon) uses a different archive architecture name.
 if(ORT_OS STREQUAL "osx" AND ORT_ARCH STREQUAL "aarch64")
     set(ORT_ARCH "arm64")
 endif()
 
-# 3. Construction de l'URL officielle de Microsoft
+# 3. Build the official Microsoft download URL.
 set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-${ORT_OS}-${ORT_ARCH}-${ORT_VERSION}.${ORT_EXT}")
 
-# 4. Téléchargement via FetchContent
+# 4. Download the archive with FetchContent.
 include(FetchContent)
 FetchContent_Declare(
     onnxruntime_binaries
@@ -44,7 +44,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(onnxruntime_binaries)
 
-# 5. Création de la cible universelle
+# 5. Create the imported target.
 if(NOT TARGET onnxruntime)
     add_library(onnxruntime SHARED IMPORTED GLOBAL)
     

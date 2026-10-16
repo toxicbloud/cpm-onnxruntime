@@ -4,7 +4,7 @@ project(cpm_onnxruntime_example CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# --- 1. Auto-téléchargement de CPM.cmake ---
+# --- 1. Download CPM.cmake if needed ---
 set(CPM_DOWNLOAD_VERSION 0.40.0)
 set(CPM_DOWNLOAD_LOCATION "${CMAKE_BINARY_DIR}/cmake/CPM_${CPM_DOWNLOAD_VERSION}.cmake")
 if(NOT (EXISTS ${CPM_DOWNLOAD_LOCATION}))
@@ -16,12 +16,11 @@ if(NOT (EXISTS ${CPM_DOWNLOAD_LOCATION}))
 endif()
 include(${CPM_DOWNLOAD_LOCATION})
 
-# --- 2. Utilisation du wrapper ---
-# Remplacer 1.18.0 par la version que l'on veut tester
-CPMAddPackage("gh:toxicbloud/cpm-onnxruntime@1.27.1")
+# --- 2. Add the wrapper ---
+CPMAddPackage("gh:toxicbloud/cpm-onnxruntime@1.31.0")
 
-# --- 3. Création de l'exécutable ---
+# --- 3. Create the executable ---
 add_executable(mon_app main.cpp)
 
-# --- 4. Linker ONNX Runtime ---
+# --- 4. Link ONNX Runtime ---
 target_link_libraries(mon_app PRIVATE onnxruntime)
