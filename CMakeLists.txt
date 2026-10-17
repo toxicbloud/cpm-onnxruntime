@@ -5,6 +5,12 @@ set(ORT_VERSION "1.31.0")
 
 project(cpm-onnxruntime VERSION ${ORT_VERSION} LANGUAGES CXX)
 
+set(ORT_BACKEND "CPU" CACHE STRING "ONNX Runtime backend (CPU, CUDA, or ROCM)")
+set_property(CACHE ORT_BACKEND PROPERTY STRINGS CPU CUDA ROCM)
+set(ORT_CUDA_VERSION "12" CACHE STRING "CUDA major version for the CUDA backend (12 or 13)")
+set_property(CACHE ORT_CUDA_VERSION PROPERTY STRINGS 12 13)
+set(ORT_URL "" CACHE STRING "Override the ONNX Runtime archive URL (required for ROCm)")
+
 # 1. Detect the operating system.
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(ORT_OS "linux")
@@ -33,8 +39,36 @@ if(ORT_OS STREQUAL "osx" AND ORT_ARCH STREQUAL "aarch64")
     set(ORT_ARCH "arm64")
 endif()
 
-# 3. Build the official Microsoft download URL.
-set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-${ORT_OS}-${ORT_ARCH}-${ORT_VERSION}.${ORT_EXT}")
+string(TOUPPER "${ORT_BACKEND}" ORT_BACKEND)
+if(NOT ORT_BACKEND MATCHES "^(CPU|CUDA|ROCM)$")
+    message(FATAL_ERROR "Unsupported ORT_BACKEND '${ORT_BACKEND}'. Choose CPU, CUDA, or ROCM.")
+endif()
+
+if(ORT_BACKEND STREQUAL "CUDA")
+    if(NOT ORT_CUDA_VERSION MATCHES "^(12|13)$")
+        message(FATAL_ERROR "Unsupported ORT_CUDA_VERSION '${ORT_CUDA_VERSION}'. Choose 12 or 13.")
+    endif()
+    if(NOT ORT_OS MATCHES "^(linux|win)$" OR NOT ORT_ARCH STREQUAL "x64")
+        message(FATAL_ERROR "The CUDA backend is available only for Linux x64 and Windows x64.")
+    endif()
+elseif(ORT_BACKEND STREQUAL "ROCM")
+    if(NOT ORT_OS STREQUAL "linux" OR NOT ORT_ARCH STREQUAL "x64")
+        message(FATAL_ERROR "The ROCm backend is available only for Linux x64.")
+    endif()
+    if(NOT ORT_URL)
+        message(FATAL_ERROR "ROCm is not published in the ONNX Runtime ${ORT_VERSION} release archives. Set ORT_URL to a compatible ROCm archive.")
+    endif()
+endif()
+
+# 3. Build the official Microsoft download URL unless an archive URL was provided.
+if(NOT ORT_URL)
+    if(ORT_BACKEND STREQUAL "CUDA")
+        set(ORT_PACKAGE "gpu_cuda${ORT_CUDA_VERSION}-")
+    else()
+        set(ORT_PACKAGE "")
+    endif()
+    set(ORT_URL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-${ORT_OS}-${ORT_ARCH}-${ORT_PACKAGE}${ORT_VERSION}.${ORT_EXT}")
+endif()
 
 # 4. Download the archive with FetchContent.
 include(FetchContent)

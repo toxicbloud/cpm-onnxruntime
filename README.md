@@ -20,4 +20,20 @@ add_executable(my_app main.cpp)
 target_link_libraries(my_app PRIVATE onnxruntime)
 ```
 
-The package version selects the ONNX Runtime release. See [`example/`](example/) for a complete, buildable project.
+The package version selects the ONNX Runtime release. By default, the CPU package is used. Select another backend by setting its CMake variables before adding the package:
+
+```cmake
+set(ORT_BACKEND CUDA) # CUDA GPU package
+set(ORT_CUDA_VERSION 12) # 12 or 13
+CPMAddPackage("gh:toxicbloud/cpm-onnxruntime@1.31.0")
+```
+
+`CUDA` packages are available for Linux x64 and Windows x64. macOS and ARM builds use the CPU package. ROCm is not included in the official ONNX Runtime 1.31.0 release archives; to use a compatible ROCm build, provide its archive URL:
+
+```cmake
+set(ORT_BACKEND ROCM)
+set(ORT_URL "https://example.com/onnxruntime-rocm.tgz")
+CPMAddPackage("gh:toxicbloud/cpm-onnxruntime@1.31.0")
+```
+
+The custom ROCm archive must have the same `include/` and `lib/` layout expected by this wrapper. See [`example/`](example/) for a complete, buildable project.
