@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 
 # This line is updated automatically by the GitHub Action.
-set(ORT_VERSION "1.31.1")
+set(ORT_VERSION "1.30.1")
 
 project(cpm-onnxruntime VERSION ${ORT_VERSION} LANGUAGES CXX)
 
